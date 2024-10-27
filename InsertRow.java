@@ -63,7 +63,40 @@ public class InsertRow {
          * Feel free to also add one or more private helper methods
          * to do some of the work (e.g., to fill in the offsets array
          * with the appropriate offsets).
+         * 
+         * When inserting a row, we need to turn a collection of fields into a key/value pair
+         * e.g. ('9876543', 'psych', 125) into key 9876543, value -2 8 13 17 psych 125
+         * key and values are each represented by a DatabaseEntry object
+         * Based on a byte array that we need to create
+         * the primay key becomes the key in the key/value pair
+         * Classes for manipulating byte arrays:
+         * Inherits from Java's DataOutputStream:
+         * writeBytes(String val)
+         * writeShort(int val) - this will be the type of the offset
+         * writeInt(int val)
+         * writeDouble(double val)
+         * methods for obtaining the results of the writes
+         * getBufferBytes()
+         * getBufferLength()
+         * includes a toString() method that shows the current contents of the byte array
+         * RowInput: an input stream that reads from a byte array
+         * readBytesAtOffset(int offset, int length)
+         * readIntAtOffset(int offset) etc
+         * methods that read from current offset
+         * readNextBytes(int length)
+         * readNextInt() etc
+         * includes a toString() method that shows the byte array and the current offset
+         * e.g. RowOutput keyBuffer = new RowOutput();
+         * keyBuffer.writeBytes("1234567");
+         * RowOutput valueBuffer = newRowOutput();
+         * valueBuffer.writeShort(-2);
+         * valueBuffer.writeShort(8);
+         * valueBuffer.writeShort(16);
+         * valueBuffer.writeShort(20);
+         * valueBuffer.writeBytes("comp sci");
+         * valueBuffer.writeInt(200);
          */
+
     }
         
     /**

@@ -63,6 +63,13 @@ public class InsertStatement extends SQLStatement {
             /* 
              * PS 3: Add code below to perform the actual insertion, 
              * and to print the appropriate message after it has occurred.
+             * 
+             * Inserting Data into BDB
+             * byte[] bytes = keyBuffer.getBufferBytes();
+             * int numBytes = keyBuffer.getBufferLength();
+             * DatabaseEntry key = new DatabaseEntry(bytes, 0, numBytes)
+             * 
+             * bytes = valueBuffer.getBufferBytes
              */
             
             
