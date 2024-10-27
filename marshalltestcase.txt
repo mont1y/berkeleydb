@@ -1,0 +1,48 @@
+moniatyjim@Vulerable-Machine CS460 % java DBMSSimulator      
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', 'Frozen', 102);
+EXPECTED:
+Offsets Array: [-2, 8, 14, 18]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, 0, 8, 0, 14, 0, 18, 70, 114, 111, 122, 101, 110, 0, 0, 0, 102]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', 'Frozen', 150);
+EXPECTED:
+Offsets Array: [-2, 8, 14, 18]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, 0, 8, 0, 14, 0, 18, 70, 114, 111, 122, 101, 110, 0, 0, 0, -106]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', 'Frozen', 300);
+EXPECTED:
+Offsets Array: [-2, 8, 14, 18]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, 0, 8, 0, 14, 0, 18, 70, 114, 111, 122, 101, 110, 0, 0, 1, 44]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', 'Frozen', null);
+EXPECTED:
+Offsets Array: [-2, 8, -1, 14]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, 0, 8, -1, -1, 0, 14, 70, 114, 111, 122, 101, 110]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', null, 104);
+EXPECTED:
+Offsets Array: [-2, 8, -1, 14]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, 0, 8, -1, -1, 0, 14, 70, 114, 111, 122, 101, 110]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES ('2294629', null, 104);
+EXPECTED:
+Offsets Array: [-2, -1, 8, 12]
+Key Buffer: [50, 50, 57, 52, 54, 50, 57]
+Value Buffer: [-1, -2, -1, -1, 0, 8, 0, 12, 0, 0, 0, 104]
+
+CREATE TABLE Movie(id CHAR(7) PRIMARY KEY, name VARCHAR(64), runtime INT);
+INSERT INTO Movie VALUES (null, null, 104);
+EXPECTED:
+Could not insert row because there's no primary key

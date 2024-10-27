@@ -97,6 +97,7 @@ public class InsertRow {
          * valueBuffer.writeInt(200);
          */
 
+        // System.out.println("hello????????????");
         // get primary key
         int numColumns = table.numColumns();
         Column pkColumn = table.primaryKeyColumn();
@@ -156,11 +157,8 @@ public class InsertRow {
                 currentOffset += length;
             }
         }
-
-        // Write offsets into valueBuffer 
-        for (int i = 0; i < offsets.length; i++) { 
-            valueBuffer.writeShort(offsets[i]); 
-        }
+        // last one
+        offsets[numColumns] = currentOffset;
 
         // write primary key using keyBuffer
         Object pkValue = columnVals[pkIndex];
@@ -197,6 +195,12 @@ public class InsertRow {
                 break;
             default:
                 throw new IOException("something's wrong at primary key column");
+        }
+
+        // Write offsets into valueBuffer 
+        for (int i = 0; i < offsets.length; i++) { 
+            valueBuffer.writeShort(offsets[i]);
+            // System.out.println("writing valuebuffer offet:" + offsets[i]);
         }
 
         // Write column values into valueBuffer
@@ -243,7 +247,6 @@ public class InsertRow {
                     throw new IOException("something's wrong at column of values: " + col.getType());
             }
         }
-
         
     }
         
