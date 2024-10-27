@@ -97,6 +97,154 @@ public class InsertRow {
          * valueBuffer.writeInt(200);
          */
 
+        // get primary key
+        int numColumns = table.numColumns();
+        Column pkColumn = table.primaryKeyColumn();
+        if (pkColumn == null) {
+            System.out.println("There is no primary key");
+        }
+        int pkIndex = -1;
+        for (int i = 0; i < numColumns; i++) {
+            if (table.getColumn(i) == pkColumn) {
+                pkIndex = i;
+                break;
+            }
+        }
+        if (pkIndex == -1) {
+            // if still can't find anything
+            throw new IOException("error at pkIndex");
+        }
+        
+        // Calculate the size of the offset table
+        int offsetTableSize = (numColumns + 1) * 2;
+        int currentOffset = offsetTableSize;
+
+        // Determine offsets for each column
+        for (int i = 0; i < numColumns; i++) {
+            if (i == pkIndex) {
+                // if this is the primary key column
+                // offset is IS_PKEY which is -2
+                offsets[i] = IS_PKEY; 
+            } else if (columnVals[i] == null) {
+                // NULL value set -1
+                offsets[i] = IS_NULL;
+            } else {
+                // Non-null value
+                // start from the end of the space the offset takes - currenOffset
+                offsets[i] = currentOffset;
+                Column col = table.getColumn(i);
+                int length = 0;
+
+                // Determine the length of the column value
+                switch (col.getType()) {
+                    case Column.INTEGER:
+                        length = 4; // int is 4 bytes
+                        break;
+                    case Column.REAL:
+                        length = 8; // double is 8 bytes
+                        break;
+                    case Column.CHAR:
+                        length = col.getLength(); // Fixed length
+                        break;
+                    case Column.VARCHAR:
+                        String strVal = (String) columnVals[i];
+                        length = strVal.length(); // Variable length
+                        break;
+                    default:
+                        throw new IOException("somthing's wrong in columns offsets");
+                }
+                currentOffset += length;
+            }
+        }
+
+        // Write offsets into valueBuffer 
+        for (int i = 0; i < offsets.length; i++) { 
+            valueBuffer.writeShort(offsets[i]); 
+        }
+
+        // write primary key using keyBuffer
+        Object pkValue = columnVals[pkIndex];
+        Column pkCol = table.getColumn(pkIndex);
+        switch (pkCol.getType()) {
+            case Column.INTEGER:
+                keyBuffer.writeInt(((Integer) pkValue).intValue());
+                break;
+            case Column.REAL:
+                keyBuffer.writeDouble(((Double) pkValue).doubleValue());
+                break;
+            case Column.CHAR:
+                String strPkVal = (String) pkValue;
+
+                // not sure if this is needed
+                int pkLen = pkCol.getLength();
+                // add spaces if it's shorter than pkLen
+                if (strPkVal.length() < pkLen) {
+                    int paddingLength = pkLen - strPkVal.length();
+                    StringBuilder sb = new StringBuilder(strPkVal);
+                    for (int j = 0; j < paddingLength; j++) {
+                        sb.append(' ');
+                    }
+                    strPkVal = sb.toString();
+                } else if (strPkVal.length() > pkLen) {
+                    // Truncate the string if it's longer than allocated size
+                    strPkVal = strPkVal.substring(0, pkLen);
+                }
+
+                keyBuffer.writeBytes(strPkVal);
+                break;
+            case Column.VARCHAR:
+                keyBuffer.writeBytes((String) pkValue);
+                break;
+            default:
+                throw new IOException("something's wrong at primary key column");
+        }
+
+        // Write column values into valueBuffer
+        for (int i = 0; i < numColumns; i++) {
+            // Skip primary key and null value
+            if (i == pkIndex || columnVals[i] == null) {
+                continue;
+            }
+
+            Column col = table.getColumn(i);
+            switch (col.getType()) {
+                case Column.INTEGER:
+                    valueBuffer.writeInt(((Integer) columnVals[i]).intValue());
+                    break;
+                case Column.REAL:
+                    valueBuffer.writeDouble(((Double) columnVals[i]).doubleValue());
+                    break;
+                case Column.CHAR:
+                    String strVal = (String) columnVals[i];
+                    int len = col.getLength();
+                    // Pad or truncate the string to fixed length
+                    String paddedStr = String.format("%1$-" + len + "s", strVal)
+                                        .substring(0, len);
+
+                    // again, not sure if this is needed
+                    // add spaces if it's shorter than pkLen
+                    if (strVal.length() < len) {
+                        int paddingLength = len - strVal.length();
+                        StringBuilder sb = new StringBuilder(strVal);
+                        for (int j = 0; j < paddingLength; j++) {
+                            sb.append(' ');
+                        }
+                        strVal = sb.toString();
+                    } else if (strVal.length() > len) {
+                        // Truncate the string if it's longer than allocated size
+                        strVal = strVal.substring(0, len);
+                    }
+                    valueBuffer.writeBytes(paddedStr);
+                    break;
+                case Column.VARCHAR:
+                    valueBuffer.writeBytes((String) columnVals[i]);
+                    break;
+                default:
+                    throw new IOException("something's wrong at column of values: " + col.getType());
+            }
+        }
+
+        
     }
         
     /**
