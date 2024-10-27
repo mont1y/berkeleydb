@@ -70,8 +70,40 @@ public class InsertStatement extends SQLStatement {
              * DatabaseEntry key = new DatabaseEntry(bytes, 0, numBytes)
              * 
              * bytes = valueBuffer.getBufferBytes
+             * numBytes = valueBuffer.getBufferLength();
+             * DatabaseEntry value = new DatabaseEntry(bytes, 0, numBytes)
+             * 
+             * Use the Database putNoOverwrite Method:
+             * Database db; //assume it has been opened
+             * OperationStatus ret = db.putNoOverwrite(null, key, value);
+             * null because we are not using transactions
+             * if there is an existing key/value pair with the specified key:
+             * the insertion fails
+             * the method returns OperationStatus.KEYEXIST
+             * if the insertion succeeds, returns OperationStatus.SUCCESS
              */
+            // get databaseentry object of key value pair
+            byte[] keyBytes = row.getKeyBuffer().getBufferBytes();
+            int keyLength = row.getKeyBuffer().getBufferLength();
+            DatabaseEntry key = new DatabaseEntry(keyBytes, 0, keyLength);
+
+            byte[] valueBytes = row.getValueBuffer().getBufferBytes();
+            int valueLength = row.getValueBuffer().getBufferLength();
+            DatabaseEntry value = new DatabaseEntry(valueBytes, 0, valueLength);
             
+            Database db = table.getDB();
+            // System.out.println("databsename: " + table.getName());
+            OperationStatus ret = db.putNoOverwrite(null, key, value);
+        
+            // output the different scenarios of the insert
+            if (ret == OperationStatus.KEYEXIST) {
+                System.out.println("key already exists, insertion failed");
+            } else if (ret == OperationStatus.SUCCESS) {
+                // Insertion was successful
+                System.out.println("Added 1 row to " + table.getName() + ".");
+            } else {
+                System.out.println("BEEP BOOP");
+            }
             
         } catch (Exception e) {
             if (DBMS.DEBUG) {

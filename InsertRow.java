@@ -97,7 +97,7 @@ public class InsertRow {
          * valueBuffer.writeInt(200);
          */
 
-        System.out.println("hello????????????");
+        // System.out.println("hello????????????");
         // get primary key
         int numColumns = table.numColumns();
         Column pkColumn = table.primaryKeyColumn();
