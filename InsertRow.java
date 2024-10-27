@@ -97,13 +97,14 @@ public class InsertRow {
          * valueBuffer.writeInt(200);
          */
 
-        // System.out.println("hello????????????");
+        System.out.println("hello????????????");
         // get primary key
         int numColumns = table.numColumns();
         Column pkColumn = table.primaryKeyColumn();
         if (pkColumn == null) {
-            System.out.println("There is no primary key");
+            System.out.println("There is no primary key column");
         }
+        // get the index of columbn of primary key
         int pkIndex = -1;
         for (int i = 0; i < numColumns; i++) {
             if (table.getColumn(i) == pkColumn) {
@@ -118,9 +119,11 @@ public class InsertRow {
         
         // Calculate the size of the offset table
         int offsetTableSize = (numColumns + 1) * 2;
+        // System.out.println("getTbaleSizr" + offsetTableSize);
+        // set currentOffset to the start of the value after offsets
         int currentOffset = offsetTableSize;
 
-        // Determine offsets for each column
+        // Determine offsets for each value column
         for (int i = 0; i < numColumns; i++) {
             if (i == pkIndex) {
                 // if this is the primary key column
@@ -139,17 +142,21 @@ public class InsertRow {
                 // Determine the length of the column value
                 switch (col.getType()) {
                     case Column.INTEGER:
-                        length = 4; // int is 4 bytes
+                        // 4 byte int
+                        length = 4; 
                         break;
                     case Column.REAL:
-                        length = 8; // double is 8 bytes
+                        // 8 bytes real
+                        length = 8; 
                         break;
                     case Column.CHAR:
-                        length = col.getLength(); // Fixed length
+                        // Fixed length for char
+                        length = col.getLength(); 
                         break;
                     case Column.VARCHAR:
+                        // Variable
                         String strVal = (String) columnVals[i];
-                        length = strVal.length(); // Variable length
+                        length = strVal.length(); 
                         break;
                     default:
                         throw new IOException("somthing's wrong in columns offsets");
@@ -157,7 +164,7 @@ public class InsertRow {
                 currentOffset += length;
             }
         }
-        // last one
+        // last offset
         offsets[numColumns] = currentOffset;
 
         // write primary key using keyBuffer
@@ -172,10 +179,10 @@ public class InsertRow {
                 break;
             case Column.CHAR:
                 String strPkVal = (String) pkValue;
-
-                // not sure if this is needed
                 int pkLen = pkCol.getLength();
+
                 // add spaces if it's shorter than pkLen
+                // basically pad it with spaces since it's fixed length
                 if (strPkVal.length() < pkLen) {
                     int paddingLength = pkLen - strPkVal.length();
                     StringBuilder sb = new StringBuilder(strPkVal);
@@ -184,14 +191,21 @@ public class InsertRow {
                     }
                     strPkVal = sb.toString();
                 } else if (strPkVal.length() > pkLen) {
-                    // Truncate the string if it's longer than allocated size
+                    // it it exceeds length, we substring it
                     strPkVal = strPkVal.substring(0, pkLen);
                 }
 
                 keyBuffer.writeBytes(strPkVal);
                 break;
             case Column.VARCHAR:
-                keyBuffer.writeBytes((String) pkValue);
+                // if exceeds the varchar limit, truncate
+                // System.out.println("varcahr limit is: " + pkCol.getLength());
+                // System.out.println("cur length is: " + ((String)pkValue).length());
+                if (((String)pkValue).length() > pkCol.getLength()) {
+                    keyBuffer.writeBytes(((String)pkValue).substring(0, ((String)pkValue).length()));
+                } else {
+                    keyBuffer.writeBytes((String) pkValue);
+                }
                 break;
             default:
                 throw new IOException("something's wrong at primary key column");
@@ -200,7 +214,7 @@ public class InsertRow {
         // Write offsets into valueBuffer 
         for (int i = 0; i < offsets.length; i++) { 
             valueBuffer.writeShort(offsets[i]);
-            // System.out.println("writing valuebuffer offet:" + offsets[i]);
+            // System.out.println("writing valuebuffer offet: " + offsets[i]);
         }
 
         // Write column values into valueBuffer
@@ -221,11 +235,7 @@ public class InsertRow {
                 case Column.CHAR:
                     String strVal = (String) columnVals[i];
                     int len = col.getLength();
-                    // Pad or truncate the string to fixed length
-                    String paddedStr = String.format("%1$-" + len + "s", strVal)
-                                        .substring(0, len);
 
-                    // again, not sure if this is needed
                     // add spaces if it's shorter than pkLen
                     if (strVal.length() < len) {
                         int paddingLength = len - strVal.length();
@@ -238,10 +248,18 @@ public class InsertRow {
                         // Truncate the string if it's longer than allocated size
                         strVal = strVal.substring(0, len);
                     }
-                    valueBuffer.writeBytes(paddedStr);
+                    valueBuffer.writeBytes(strVal);
                     break;
                 case Column.VARCHAR:
-                    valueBuffer.writeBytes((String) columnVals[i]);
+                    String strVal2 = (String) columnVals[i];
+                    // if exceeds the varchar limit, truncate
+                    // System.out.println("varchar limit is: " + col.getLength());
+                    // System.out.println("cur length is: " + ((String)strVal2).length());
+                    if (strVal2.length() > col.getLength()) {
+                        keyBuffer.writeBytes((strVal2).substring(0, strVal2.length()));
+                    } else {
+                        keyBuffer.writeBytes(strVal2);
+                    }
                     break;
                 default:
                     throw new IOException("something's wrong at column of values: " + col.getType());
