@@ -97,12 +97,12 @@ public class InsertStatement extends SQLStatement {
         
             // output the different scenarios of the insert
             if (ret == OperationStatus.KEYEXIST) {
-                System.out.println("key already exists, insertion failed");
+                System.out.println("There is an existing row with the specified primary key.\nCould not insert row.");
             } else if (ret == OperationStatus.SUCCESS) {
                 // Insertion was successful
                 System.out.println("Added 1 row to " + table.getName() + ".");
             } else {
-                System.out.println("BEEP BOOP");
+                System.out.println("BEEP BOOP SOMETHING WEALLY BAD HAPPENED");
             }
             
         } catch (Exception e) {

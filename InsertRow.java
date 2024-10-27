@@ -169,7 +169,7 @@ public class InsertRow {
 
         // write primary key using keyBuffer
         Object pkValue = columnVals[pkIndex];
-        Column pkCol = table.getColumn(pkIndex);
+        Column pkCol = table.primaryKeyColumn();
         switch (pkCol.getType()) {
             case Column.INTEGER:
                 keyBuffer.writeInt(((Integer) pkValue).intValue());
@@ -256,9 +256,9 @@ public class InsertRow {
                     // System.out.println("varchar limit is: " + col.getLength());
                     // System.out.println("cur length is: " + ((String)strVal2).length());
                     if (strVal2.length() > col.getLength()) {
-                        keyBuffer.writeBytes((strVal2).substring(0, strVal2.length()));
+                        valueBuffer.writeBytes((strVal2).substring(0, strVal2.length()));
                     } else {
-                        keyBuffer.writeBytes(strVal2);
+                        valueBuffer.writeBytes(strVal2);
                     }
                     break;
                 default:

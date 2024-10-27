@@ -216,9 +216,172 @@ public class TableIterator {
         /* 
          * PS 3: replace the following return statement with your 
          * implementation of the rest of this method.
+         * 
+         * Cursor - iterate over records in a database file
+         * the key/value pairs are return in "empty" DatabseEntrys
+         * that are passed as parameters to the cursor's getNext method
+         * 
+         * OperationStatus ret = curs.getNext(key, value, null);
+         * 
+         * takes an index n and returns the value of the nth column in the tuple on 
+         * which the iterator is currently positioned. To do so, it will need to 
+         * unmarshall the appropriate value from the BDB key/value pair associated with 
+         * that tuple, and it should use the metadata that you included when you 
+         * marshalled the tuple to efficiently access the value of the specified column. 
+         * 
+         * A TableIterator has 
+         * fields for the current key/value pair accessed by the cursor
+         * methods for advacing/resetting the cursor
+         * this method which gets a column's value
+         * 
+         * First, create necessary RowInput objects:
+         * RowInput keyIn = new RowInput(this.key.getData());
+         * RowInput valueIn = new RowInput(this.value.getData());
+         * Then, use RowInput methods to access the necessary offsets and value
+         * 
+         * You should not unmarshall the entire record but only the portions that are needed
+         * to get the value of the specified column
+         * 
+         * Mostly use the at offset versions of the RowInput methods such as
+         * readBytesAtOffset, readIntAtOffset, etc
+         * 
+         * Example:
+         * Movie(id CHAR(7), name VARCHAR(64), runtime INT, rating VARCHAR(5), earnings_rank INT)
+         * Didn't specify primary key - id is the primary key
+         * 
+         * The curosr is currently positioned on this key/value pair
+         * to retrieve the movie's name, determine the offset, which is 2 bytes from the start
+         * read at offset of 2 is 12
+         * because name is a VARCHAR, read offset at 3 which is 21
+         * 21 - 12 = 9
+         * read 9 bytes at an offset of 12 bytes -> 'Moonlight'
+         * 
+         * To retrieve the movie's earnings_rank, we determine that the offset is 4*2 = 8 bytes
+         * from the start
+         * perform a read at an offset of 8 to obtain offset of 4, which is -1
+         * we conclude that the value is null
+         * 
+         * To retrieve the movie's rating, we determine that the offset at column 3 is 
+         * 3*2 = 6 bytes from the start
+         * we perform a read at an offset of 6 to obtain the offset of the column which is 25
+         * because rating is a VARCHAR, read offset at column 4 is -1, so we keep going
+         * we read offset at column 5, is 26
+         * compute length 26-25 = 1, read one byte at offset of 25 -> 'R'
+         * 
          */
-        return null;
+        try {
+            // Create RowInput objects for key and value buffers.
+            RowInput keyIn = new RowInput(this.key.getData());
+            RowInput valIn = new RowInput(this.value.getData());
+    
+            int numColumns = this.table.numColumns();
+    
+            // Calculate the position of the offset for the specified column.
+            int offsetPosition = colIndex * 2; // Each offset is 2 bytes.
+    
+            // Read the offset for the specified column.
+            int offset = valIn.readShortAtOffset(offsetPosition);
+    
+            // Handle special cases.
+            if (offset == InsertRow.IS_NULL) {
+                // Column value -1, which is NULL
+                return null;
+            } else if (offset == InsertRow.IS_PKEY) {
+                // Column value is key
+                return readValueFromKeyBuffer(col, keyIn);
+            } else {
+                // Column value is value
+                return readValueFromValueBuffer(colIndex, col, valIn, offset);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Error has happened! " + e);
+        }
     }
+
+    private Object readValueFromKeyBuffer(Column col, RowInput keyIn) {
+        try {
+            switch (col.getType()) {
+                case Column.INTEGER:
+                    // Read 4-byte integer
+                    return keyIn.readIntAtOffset(0);
+                case Column.REAL:
+                    // Read 8-byte double
+                    return keyIn.readDoubleAtOffset(0);
+                case Column.CHAR:
+                    // Read fixed-length CHAR
+                    String str = keyIn.readBytesAtOffset(0, col.getLength());
+                    return str.trim(); 
+                    // Trim to remove front and back and maybe spaces
+                case Column.VARCHAR:
+                    // Read variable-length VARCHAR from offset 0 to the end of key.
+                    int keyLength = this.key.getSize();
+                    String varcharStr = keyIn.readBytesAtOffset(0, keyLength);
+                    return varcharStr;
+                default:
+                    throw new IOException("error appeared in key type unmarshalling");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Error appeared in key read for column value", e);
+        }
+    }
+
+    private Object readValueFromValueBuffer(int colIndex, Column col, RowInput valIn, int offset) {
+        try {
+            int numColumns = this.table.numColumns();
+            // max length of offsets
+            int offsetsLength = (numColumns + 1) * 2; 
+    
+            // Find the next that is not -1 (if it is we just ignore)
+            int nextOffset = -1;
+            int startposition = colIndex + 1;
+            for (int i = startposition; i <= numColumns; i++) {
+                int nextOffsetPosition = i * 2;
+                if (nextOffsetPosition >= offsetsLength) {
+                    // no more offsets for me to read, we're at the end
+                    // break
+                    break;
+                }
+                int tempOffset = valIn.readShortAtOffset(nextOffsetPosition);
+                // if it is not null or primary key/-1 or -2
+                if (tempOffset >= 0) {
+                    nextOffset = tempOffset;
+                    break;
+                }
+            }
+    
+            int length;
+            if (nextOffset != -1) {
+                length = nextOffset - offset;
+            } else {
+                // If no next offset found
+                // Length is just from this to the end
+                length = this.value.getSize() - offset;
+            }
+    
+            switch (col.getType()) {
+                case Column.INTEGER:
+                    // Read 4-byte integer
+                    return valIn.readIntAtOffset(offset);
+                case Column.REAL:
+                    // Read 8-byte double
+                    return valIn.readDoubleAtOffset(offset);
+                case Column.CHAR:
+                    // Read fixed-length char
+                    int charLength = col.getLength();
+                    String charStr = valIn.readBytesAtOffset(offset, charLength);
+                    return charStr.trim();
+                case Column.VARCHAR:
+                    // Read variable-length VARCHAR
+                    String varcharStr = valIn.readBytesAtOffset(offset, length);
+                    return varcharStr;
+                default:
+                    throw new IOException("error at value column type");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("error at value column read", e);
+        }
+    }    
+    
     
     /**
      * Gets the number of tuples that the iterator has visited.
