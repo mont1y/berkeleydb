@@ -66,13 +66,13 @@ public class SelectStatement extends SQLStatement {
         
         try {
 
-            System.out.println("numTables: " + this.numTables());
+            // System.out.println("numTables: " + this.numTables());
             if (this.numTables() != 1) {
                 throw new Exception("Specifying multiple table names in the FROM clause is not supported.");
             }
 
-            System.out.println("selectList.size " + this.selectList.size());
-            System.out.println("selectList.get(0) " + this.selectList.get(0));
+            // System.out.println("selectList.size " + this.selectList.size());
+            // System.out.println("selectList.get(0) " + this.selectList.get(0));
             if (!(this.selectList.size() == 1 && this.selectList.get(0).equals(STAR))) {
                 throw new Exception("Specifying column names in the SELECT clause is not supported.");
             }
